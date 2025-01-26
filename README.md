@@ -155,6 +155,12 @@ eUPF supports sending GTP Echo requests towards neighbour GTP nodes. Every neigh
 
  </details>
 
+## Running from Docker Compose
+
+```bash
+cd dev/ && docker-compose up --build
+```
+
 ## Running from sources
 
 ### Prerequisites

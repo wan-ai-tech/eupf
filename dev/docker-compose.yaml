@@ -1,0 +1,29 @@
+services:
+  eupf:
+    build:
+      context: ../
+      dockerfile: dev/Dockerfile
+      args:
+        BPF_ENABLE_LOG: "0"
+        BPF_ENABLE_ROUTE_CACHE: "0"
+    privileged: true
+    volumes:
+      - ../:/app
+      - /tmp/eupf:/tmp/eupf
+      - /sys/fs/bpf:/sys/fs/bpf
+      - /sys/kernel/debug:/sys/kernel/debug
+      - ~/go/pkg/mod:/go/pkg/mod
+      - ~/.cache/go-build:/root/.cache/go-build
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    environment:
+      - BPF_ENABLE_LOG=-DENABLE_LOG
+      - BPF_ENABLE_ROUTE_CACHE=-DENABLE_ROUTE_CACHE
+      - GOBUILDFLAGS=-buildvcs=false
+    ulimits:
+      memlock: -1
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE # setrlimit
