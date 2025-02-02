@@ -116,6 +116,11 @@ func init() {
 }
 
 func (c *UpfConfig) Validate() error {
+	// First handle N9 address assignment before validation
+	if c.N9Address == "n3addr" {
+		c.N9Address = c.N3Address
+	}
+
 	if err := validator.New().Struct(c); err != nil {
 		return err
 	}

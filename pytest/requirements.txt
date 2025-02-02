@@ -1,4 +1,8 @@
 scapy==2.5.0
 pytest==7.4.3
 robotframework==6.1.1
-robotframework-requests==0.10.0
+robotframework-requests==1.0a14
+git+https://github.com/kade-ddnkv/robotframework-ScapyLibrary@master
+robotframework-async==1.0.4
+robotframework-run-keyword-async==1.0.4
+python-can==4.2.2

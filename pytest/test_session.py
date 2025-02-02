@@ -4,6 +4,31 @@ from scapy.all import *
 from scapy.contrib.pfcp import *
 from scapy.layers.inet import IP  # This is to calm down PyCharm's linter
 import time
+import pytest
+import os
+
+# Configuration for running in local environment
+# Default configuration values
+# DEFAULT_TARGET_IP = "172.19.0.2"
+# DEFAULT_TARGET_PORT = 8805
+# DEFAULT_SOURCE_PORT = 33100
+# DEFAULT_INTERFACE = "br-ccb8b956d6d8"
+
+# Configuration for running in container
+DEFAULT_TARGET_IP = "127.0.0.1"
+DEFAULT_TARGET_PORT = 8805
+DEFAULT_SOURCE_PORT = 33100
+DEFAULT_INTERFACE = "lo"
+
+# Allow overriding via environment variables
+TARGET_IP = os.getenv("EUPF_TARGET_IP", DEFAULT_TARGET_IP)
+TARGET_PORT = int(os.getenv("EUPF_TARGET_PORT", DEFAULT_TARGET_PORT))
+SOURCE_PORT = int(os.getenv("EUPF_SOURCE_PORT", DEFAULT_SOURCE_PORT))
+INTERFACE = os.getenv("EUPF_INTERFACE", DEFAULT_INTERFACE)
+
+@pytest.fixture(scope="session")
+def target():
+    return IP(dst=TARGET_IP) / UDP(sport=SOURCE_PORT, dport=TARGET_PORT)
 
 association_request = PFCP(version=1, S=0, seq=1) / \
                       PFCPAssociationSetupRequest(IE_list=[
@@ -103,41 +128,41 @@ session_establish_ueip = PFCP(version=1, S=1, seq=2, seid=0, spare_oct=0) / \
 # https://stackoverflow.com/questions/41166420/sending-a-packet-over-physical-loopback-in-scapy
 conf.L3socket = L3RawSocket
 
-target = IP(dst="127.0.0.1") / UDP(sport=33100, dport=8805)
-
+# target = IP(dst="127.0.0.1") / UDP(sport=33100, dport=8805)
+# target = IP(dst="172.21.0.2") / UDP(sport=33100, dport=8805)
 
 # TODO: Add state checks via eUPF web API
 
-def test_create_association():
-    ans = sr1(target / association_request, iface='lo')
+def test_create_association(target):
+    ans = sr1(target / association_request, iface=INTERFACE)
     assert ans.haslayer(PFCPAssociationSetupResponse)
     assert ans[PFCPAssociationSetupResponse][IE_Cause].cause == 1
 
 
-def test_create_session():
-    ans = sr1(target / session_establish, iface='lo')
+def test_create_session(target):
+    ans = sr1(target / session_establish, iface=INTERFACE)
     assert ans.haslayer(PFCPSessionEstablishmentResponse)
     assert ans[PFCPSessionEstablishmentResponse][IE_Cause].cause == 1
 
 
-def test_modify_session():
-    ans = sr1(target / session_modification, iface='lo')
+def test_modify_session(target):
+    ans = sr1(target / session_modification, iface=INTERFACE)
     assert ans.haslayer(PFCPSessionModificationResponse)
     assert ans[PFCPSessionModificationResponse][IE_Cause].cause == 1
 
 
-def test_delete_session():
-    ans = sr1(target / session_delete, iface='lo')
+def test_delete_session(target):
+    ans = sr1(target / session_delete, iface=INTERFACE)
     assert ans.haslayer(PFCPSessionDeletionResponse)
     assert ans[PFCPSessionDeletionResponse][IE_Cause].cause == 1
 
 
-def test_send_heartbeat():
+def test_send_heartbeat(target):
     # This is imaginary HearBeatResponse, this should not crash eUPF
-    send(target / heartbeat_response, iface='lo')
+    send(target / heartbeat_response, iface=INTERFACE)
 
 
-def test_create_session_ueip():
-    ans = sr1(target / session_establish_ueip, iface='lo')
+def test_create_session_ueip(target):
+    ans = sr1(target / session_establish_ueip, iface=INTERFACE)
     assert ans.haslayer(PFCPSessionEstablishmentResponse)
     assert ans[PFCPSessionEstablishmentResponse][IE_CreatedPDR][IE_UE_IP_Address].ipv4 == "10.60.0.1"
