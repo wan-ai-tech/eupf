@@ -16,14 +16,10 @@ docker-generate:
 .PHONY: generate dev docker-dev docker-generate
 
 dev:
-	@bash -c "cd dev && docker compose up --build"
+	@bash -c "cd dev && docker compose up"
 
-docker-dev:
-	@docker build -t eupf-dev -f dev/Dockerfile .
-	@docker run -it --rm \
-		-v $(PWD):/app \
-		-w /app \
-		eupf-dev
+dev-build:
+	@bash -c "cd dev && docker compose build"
 
 # Helper function to run commands in Python virtual environment
 define with_venv
@@ -35,8 +31,14 @@ pyenv:
 	@$(call with_venv, pip install -r pytest/requirements.txt)
 
 .PHONY: pytest
-pytest:
+dev-pytest-docker:
 	@docker exec -it dev-eupf-1 python3 -m pytest -v -k 'not test_create_session_ueip' pytest/test_session.py
+
+dev-pytest-pfcp:
+	sudo /work/wan-ai/eupf/.venv/bin/pytest -v pytest/test_session.py -k "not test_create_session_ueip"
+
+dev-pytest-gtp:
+	sudo /work/wan-ai/eupf/.venv/bin/pytest -v pytest/test_gtp.py
 
 docker-exec:
 	@docker exec -it dev-eupf-1 /bin/bash
