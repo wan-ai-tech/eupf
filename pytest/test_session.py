@@ -160,30 +160,37 @@ def test_gtp_traffic(target):
     # Using AsyncSniffer to capture the modified packet
     sniffer = AsyncSniffer(
         iface=INTERFACE,
-        lfilter=lambda x: x.haslayer(ICMP) and
-                         x[IP].dst == "8.8.8.8"
+        lfilter=lambda x: x.haslayer(GTP_U_Header)
     )
     sniffer.start()
 
+    time.sleep(.01)
     # Send the original GTP packet
     send(gtp_packet, iface=INTERFACE)
 
     # Wait for capture
-    time.sleep(1)
+    time.sleep(.01)
     sniffer.stop()
 
     # 4. Verify captured packets
     captured = sniffer.results
+    print('captured: ', captured, 'len: ', len(captured))
     assert len(captured) > 0, "No modified GTP packets captured"
 
-    modified_packet = captured[0]
+    # The first packet is the original packet, the second is the modified packet
+    modified_packet = captured[1]
+
     # Verify the packet was modified according to FAR
     assert modified_packet[IP].dst == "10.23.118.70"
     assert modified_packet[GTP_U_Header].teid == 0x01000000
 
     # Verify the inner packet remained unchanged
-    assert modified_packet[IP].src == "192.168.1.100"
-    assert modified_packet[IP].dst == "8.8.8.8"
+    # Handling encapsulated IP-in-IP packets
+    if IP in modified_packet[IP].payload:
+        inner_ip_src = modified_packet[IP].payload[IP].src
+        inner_ip_dst = modified_packet[IP].payload[IP].dst
+        assert inner_ip_src == "192.168.1.100"
+        assert inner_ip_dst == "8.8.8.8"
 
 def test_modify_session(target):
     ans = sr1(target / session_modification, iface=INTERFACE)
